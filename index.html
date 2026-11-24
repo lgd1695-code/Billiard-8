@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="description" content="Billiard 8 — game bola 8 (pool) gratis. Main di HP atau komputer, lawan komputer atau 2 pemain.">
+<meta name="theme-color" content="#0e1520">
+<title>Billiard 8 — Game Bola 8 Gratis</title>
+<!--
+  Billiard 8 — game bola 8 satu file (HTML + CSS + JS), tanpa library & tanpa aset luar.
+  Semua grafik digambar dengan canvas, semua suara dibuat dengan WebAudio.
+  Lisensi: CC0 / domain publik. Bebas dipakai, diubah, dan dijual.
+-->
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:#0e1520;color:#e8eef7;
+  font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
+button{font:inherit;color:inherit;touch-action:manipulation;cursor:pointer}
+#app{display:flex;flex-direction:column;height:100vh;height:100dvh;max-width:1200px;margin:0 auto;
+  padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+#hud{display:flex;align-items:stretch;gap:8px;padding:8px 10px 4px}
+.player{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px;padding:6px 10px;border-radius:12px;
+  background:#18222f;border:2px solid transparent;transition:border-color .2s,box-shadow .2s}
+.player.active{border-color:#ffd04a;box-shadow:0 0 14px rgba(255,208,74,.35)}
+.player .name{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.player .name small{font-weight:500;opacity:.65;margin-left:4px}
+.balls{display:flex;gap:2px;flex-wrap:wrap;min-height:17px;align-items:center}
+.balls .hint{font-size:11px;opacity:.55}
+.mini{width:17px;height:17px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:9px;font-weight:800;color:#111;box-shadow:inset -2px -3px 4px rgba(0,0,0,.35),inset 1px 1px 3px rgba(255,255,255,.4)}
+.mini.out{opacity:.22}
+.mini i{font-style:normal;background:#f4f1e8;border-radius:50%;width:10px;height:10px;display:flex;align-items:center;justify-content:center}
+.side{display:flex;flex-direction:column;gap:6px;justify-content:center}
+.icon{width:40px;height:34px;border-radius:10px;border:0;background:#223044;font-size:17px;line-height:1}
+.icon:active{background:#2c4160}
+#msg{text-align:center;font-size:14px;min-height:24px;padding:2px 12px;color:#ffd04a;line-height:1.3}
+#stage{flex:1;min-height:0;position:relative;overflow:hidden}
+canvas{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);touch-action:none;display:block}
+#controls{display:flex;align-items:center;gap:10px;padding:8px 12px 12px;transition:opacity .2s}
+#controls.off{opacity:.4;pointer-events:none}
+.pw{flex:1;display:flex;align-items:center;gap:8px;min-width:0}
+.pw span{font-size:12px;opacity:.75}
+input[type=range]{flex:1;min-width:60px;height:34px;-webkit-appearance:none;appearance:none;background:transparent;touch-action:none}
+input[type=range]::-webkit-slider-runnable-track{height:12px;border-radius:8px;background:linear-gradient(90deg,#2ecc71,#f1c40f,#e74c3c)}
+input[type=range]::-moz-range-track{height:12px;border-radius:8px;background:linear-gradient(90deg,#2ecc71,#f1c40f,#e74c3c)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;border-radius:50%;background:#fff;margin-top:-7px;border:3px solid #223044;box-shadow:0 2px 6px rgba(0,0,0,.5)}
+input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:#fff;border:3px solid #223044}
+.primary{height:44px;padding:0 20px;border-radius:12px;border:0;font-weight:800;letter-spacing:.5px;
+  background:linear-gradient(#ffd04a,#f0a500);color:#2b1a00;box-shadow:0 3px 0 #a56d00}
+.primary:active{transform:translateY(2px);box-shadow:0 1px 0 #a56d00}
+#overlay{position:fixed;inset:0;background:rgba(5,10,18,.86);display:flex;align-items:center;justify-content:center;padding:16px;z-index:10;overflow:auto}
+#overlay.hide{display:none}
+.card{width:100%;max-width:420px;background:linear-gradient(160deg,#1b2a3d,#121b28);border:1px solid #2c4160;border-radius:20px;padding:22px 20px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.6)}
+.card h1{margin:0 0 4px;font-size:30px;letter-spacing:1px}
+.card h1 b{color:#ffd04a}
+.card p{margin:6px 0 14px;opacity:.8;font-size:14px;line-height:1.45}
+.card .btns{display:grid;gap:9px}
+.card .btn{padding:13px 14px;border-radius:12px;border:0;background:#25364d;font-weight:700;font-size:15px}
+.card .btn:active{background:#33507a}
+.card .btn.main{background:linear-gradient(#ffd04a,#f0a500);color:#2b1a00}
+.card .row{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+.card small{display:block;margin-top:14px;opacity:.55;font-size:12px;line-height:1.5}
+.lbl{font-size:12px;opacity:.6;text-align:left;margin:6px 2px -2px}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="hud">
+    <div class="player" id="p1"><div class="name" id="n1">Pemain 1</div><div class="balls" id="b1"></div></div>
+    <div class="side">
+      <button class="icon" id="btnMenu" title="Menu" aria-label="Menu">&#9776;</button>
+      <button class="icon" id="btnSnd" title="Suara" aria-label="Suara">&#128266;</button>
+    </div>
+    <div class="player" id="p2"><div class="name" id="n2">Pemain 2</div><div class="balls" id="b2"></div></div>
+  </div>
+  <div id="msg"></div>
+  <div id="stage"><canvas id="c"></canvas></div>
+  <div id="controls" class="off">
+    <button class="icon" id="rotL" aria-label="Putar kiri">&#10226;</button>
+    <div class="pw"><span>Power</span><input type="range" id="power" min="5" max="100" value="55" aria-label="Power"></div>
+    <button class="icon" id="rotR" aria-label="Putar kanan">&#10227;</button>
+    <button class="primary" id="shoot">TEMBAK</button>
+  </div>
+</div>
+
+<div id="overlay">
+  <div class="card">
+    <h1 id="ovTitle">BILLIARD <b>8</b></h1>
+    <p id="ovText">Game bola 8 gratis tanpa aset berhak cipta.<br>Seret di meja untuk memutar bidikan, atur power, lalu tekan TEMBAK.</p>
+    <div class="btns">
+      <button class="btn main" id="btnResume" style="display:none">Lanjutkan</button>
+      <div class="lbl">Lawan komputer</div>
+      <div class="row">
+        <button class="btn" data-m="cpu" data-l="0">Mudah</button>
+        <button class="btn" data-m="cpu" data-l="1">Sedang</button>
+        <button class="btn" data-m="cpu" data-l="2">Sulit</button>
+      </div>
+      <div class="lbl">Bergantian di satu layar</div>
+      <button class="btn" data-m="pvp" data-l="1">2 Pemain</button>
+    </div>
+    <small>PC: gerakkan mouse untuk membidik, klik / Spasi untuk menembak, roda mouse / &uarr;&darr; untuk power.<br>
+    HP: seret jari mengelilingi bola putih untuk memutar bidikan (makin jauh jari, makin halus).</small>
+  </div>
+</div>
+<noscript>Game ini membutuhkan JavaScript.</noscript>
+
+<script>
+(() => {
+'use strict';
+
+/* ============================== KONSTANTA ============================== */
+const LW = 1000, LH = 560, TAU = Math.PI * 2;
+const PL = 50, PT = 50, PR = 950, PB = 510;        // area kain (playfield)
+const CX = (PL + PR) / 2, CY = (PT + PB) / 2;
+const BR = 13;                                      // jari-jari bola
+const FR = 260;                                     // perlambatan gesekan (px/s^2)
+const DT = 1 / 240;                                 // langkah fisika
+const E_BALL = 0.96, E_WALL = 0.78;
+const HEAD_X = PL + 0.25 * (PR - PL), FOOT_X = PL + 0.70 * (PR - PL);
+const POCKETS = [
+  { x: PL - 8,  y: PT - 8,  r: 36 }, { x: PR + 8,  y: PT - 8,  r: 36 },
+  { x: PL - 8,  y: PB + 8,  r: 36 }, { x: PR + 8,  y: PB + 8,  r: 36 },
+  { x: CX,      y: PT - 12, r: 30 }, { x: CX,      y: PB + 12, r: 30 }
+];
+const COLORS = { 1: '#f2c200', 2: '#1f4fd8', 3: '#d92d20', 4: '#7a2bc4', 5: '#ee6a10', 6: '#12853f', 7: '#8a1c1c', 8: '#151515' };
+
+/* ============================== ELEMEN ============================== */
+const $ = id => document.getElementById(id);
+const canvas = $('c'), ctx = canvas.getContext('2d');
+const stage = $('stage'), msgEl = $('msg'), controls = $('controls');
+const powerEl = $('power'), shootBtn = $('shoot'), overlay = $('overlay');
+
+/* ============================== STATE ============================== */
+let balls = [], cue = null, falling = [];
+let state = 'menu';            // menu | aim | placing | shooting | moving | over
+let turn = 0, mode = 'cpu', level = 1;
+let names = ['Pemain 1', 'Pemain 2'];
+let groups = [null, null];     // 'solid' | 'stripe'
+let aimAngle = 0, power = 0.55;
+let firstShot = true, ballInHand = false;
+let shotInfo = null, anim = null, acc = 0, movingTime = 0;
+let notice = '', paused = false, gameStarted = false, timer = 0;
+let portrait = false, S = 1, dw = LW, dh = LH, tableC = null;
+let ptr = null;
+
+/* ============================== UTIL ============================== */
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const isCpu = p => mode === 'cpu' && p === 1;
+const humanTurn = () => !isCpu(turn);
+const gauss = () => (Math.random() + Math.random() + Math.random() - 1.5) / 0.5;
+function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; [a[i], a[j]] = [a[j], a[i]]; } return a; }
+function normAng(a) { while (a > Math.PI) a -= TAU; while (a < -Math.PI) a += TAU; return a; }
+function later(fn, ms) {
+  clearTimeout(timer);
+  timer = setTimeout(function tick() { if (paused) { timer = setTimeout(tick, 200); return; } fn(); }, ms);
+}
+const ballsLeft = type => balls.filter(b => b.on && b.type === type).length;
+const groupLabel = g => g === 'solid' ? 'polos (1–7)' : 'belang (9–15)';
+function targetText(p) {
+  const g = groups[p];
+  if (!g) return 'bola mana saja (polos / belang)';
+  if (ballsLeft(g) === 0) return 'bola 8';
+  return 'bola ' + groupLabel(g);
+}
+
+/* ============================== SUARA ============================== */
+let actx = null, muted = false; const lastSnd = {};
+function ensureAudio() {
+  try {
+    if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
+    if (actx.state === 'suspended') actx.resume();
+  } catch (e) { actx = null; }
+}
+function tone(kind, freq, dur, vol, type, slide) {
+  if (!actx || muted || vol < 0.02) return;
+  const now = performance.now();
+  if (lastSnd[kind] && now - lastSnd[kind] < 30) return;
+  lastSnd[kind] = now;
+  const t = actx.currentTime, o = actx.createOscillator(), g = actx.createGain();
+  o.type = type; o.frequency.setValueAtTime(freq, t);
+  o.frequency.exponentialRampToValueAtTime(Math.max(30, freq * slide), t + dur);
+  g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(g); g.connect(actx.destination); o.start(t); o.stop(t + dur + 0.03);
+}
+const sndHit = v => tone('hit', 1100 + Math.random() * 300, 0.07, Math.min(0.35, v / 1400 * 0.35), 'triangle', 0.45);
+const sndWall = v => tone('wall', 200, 0.09, Math.min(0.25, v / 1200 * 0.25), 'sine', 0.6);
+const sndPocket = () => tone('pocket', 340, 0.28, 0.28, 'sine', 0.35);
+const sndShot = p => tone('shot', 900, 0.06, 0.15 + p * 0.2, 'square', 0.35);
+
+/* ============================== SETUP MEJA ============================== */
+function makeBall(n, type) {
+  const base = n > 8 ? n - 8 : n;
+  return { n, type, color: n === 0 ? '#f8f8f2' : COLORS[base], x: 0, y: 0, vx: 0, vy: 0, on: true };
+}
+function rack() {
+  const dxr = BR * 2 * 0.866 + 0.4, dyr = BR * 2 + 0.5;
+  const slots = [];
+  for (let c = 0; c < 5; c++) for (let j = 0; j <= c; j++) slots.push({ c, j });
+  const eightI = slots.findIndex(s => s.c === 2 && s.j === 1);
+  const cornerI = [slots.findIndex(s => s.c === 4 && s.j === 0), slots.findIndex(s => s.c === 4 && s.j === 4)];
+  const others = [];
+  for (let n = 1; n <= 7; n++) others.push(makeBall(n, 'solid'));
+  for (let n = 9; n <= 15; n++) others.push(makeBall(n, 'stripe'));
+  shuffle(others);
+  const arr = new Array(15); arr[eightI] = makeBall(8, 'eight');
+  let k = 0; for (let i = 0; i < 15; i++) if (i !== eightI) arr[i] = others[k++];
+  if (arr[cornerI[0]].type === arr[cornerI[1]].type) {      // dua sudut belakang harus beda jenis
+    for (let i = 0; i < 15; i++) {
+      if (i === eightI || cornerI.includes(i)) continue;
+      if (arr[i].type !== arr[cornerI[0]].type) { [arr[i], arr[cornerI[1]]] = [arr[cornerI[1]], arr[i]]; break; }
+    }
+  }
+  slots.forEach((s, i) => { arr[i].x = FOOT_X + s.c * dxr; arr[i].y = CY + (s.j - s.c / 2) * dyr; });
+  cue = makeBall(0, 'cue'); cue.x = HEAD_X; cue.y = CY;
+  balls = [cue, ...arr]; falling = [];
+}
+
+/* ============================== FISIKA ============================== */
+function step(dt) {
+  for (const b of balls) {
+    if (!b.on) continue;
+    b.x += b.vx * dt; b.y += b.vy * dt;
+    const sp = Math.hypot(b.vx, b.vy);
+    if (sp > 0) {
+      const ns = sp - FR * dt;
+      if (ns <= 8) { b.vx = 0; b.vy = 0; } else { const k = ns / sp; b.vx *= k; b.vy *= k; }
+    }
+  }
+  for (let i = 0; i < balls.length; i++) {
+    const a = balls[i]; if (!a.on) continue;
+    for (let j = i + 1; j < balls.length; j++) {
+      const b = balls[j]; if (!b.on) continue;
+      const dx = b.x - a.x, dy = b.y - a.y, d2 = dx * dx + dy * dy;
+      if (d2 >= 4 * BR * BR || d2 === 0) continue;
+      const d = Math.sqrt(d2), nx = dx / d, ny = dy / d, ov = (2 * BR - d) / 2;
+      a.x -= nx * ov; a.y -= ny * ov; b.x += nx * ov; b.y += ny * ov;
+      const vn = (b.vx - a.vx) * nx + (b.vy - a.vy) * ny;
+      if (vn < 0) {
+        const j2 = -(1 + E_BALL) * vn / 2;
+        a.vx -= j2 * nx; a.vy -= j2 * ny; b.vx += j2 * nx; b.vy += j2 * ny;
+        if (shotInfo && !shotInfo.firstHit && (a === cue || b === cue)) shotInfo.firstHit = a === cue ? b : a;
+        if (-vn > 25) sndHit(-vn);
+      }
+    }
+  }
+  for (const b of balls) {
+    if (!b.on) continue;
+    let pk = null;
+    for (const p of POCKETS) { if ((b.x - p.x) ** 2 + (b.y - p.y) ** 2 < p.r * p.r) { pk = p; break; } }
+    if (pk) { pocketBall(b, pk); continue; }
+    let hit = 0;
+    if (b.x < PL + BR) { b.x = PL + BR; if (b.vx < 0) { hit = -b.vx; b.vx = -b.vx * E_WALL; } }
+    else if (b.x > PR - BR) { b.x = PR - BR; if (b.vx > 0) { hit = b.vx; b.vx = -b.vx * E_WALL; } }
+    if (b.y < PT + BR) { b.y = PT + BR; if (b.vy < 0) { hit = Math.max(hit, -b.vy); b.vy = -b.vy * E_WALL; } }
+    else if (b.y > PB - BR) { b.y = PB - BR; if (b.vy > 0) { hit = Math.max(hit, b.vy); b.vy = -b.vy * E_WALL; } }
+    if (hit > 0) { if (shotInfo && shotInfo.firstHit) shotInfo.rail = true; if (hit > 40) sndWall(hit); }
+  }
+}
+function pocketBall(b, p) {
+  b.on = false; b.vx = 0; b.vy = 0;
+  falling.push({ b, x: b.x, y: b.y, px: p.x, py: p.y, t: 0 });
+  if (shotInfo) shotInfo.pocketed.push(b);
+  sndPocket();
+}
+function allStopped() { return !balls.some(b => b.on && (b.vx !== 0 || b.vy !== 0)) && falling.length === 0; }
+
+/* ============================== ATURAN ============================== */
+function startShot(angle, pw) {
+  if (state !== 'aim') return;
+  ensureAudio();
+  aimAngle = angle; power = pw;
+  shotInfo = {
+    pocketed: [], firstHit: null, rail: false, isBreak: firstShot,
+    startOpen: groups[turn] === null,
+    onEight: groups[turn] !== null && ballsLeft(groups[turn]) === 0
+  };
+  anim = { t: 0 }; state = 'shooting'; updateControls();
+}
+function fire() {
+  const v = 120 + Math.pow(power, 1.2) * 1800;
+  cue.vx = Math.cos(aimAngle) * v; cue.vy = Math.sin(aimAngle) * v;
+  sndShot(power);
+  state = 'moving'; acc = 0; movingTime = 0; anim = null;
+}
+function overlapsAny(x, y, except) {
+  for (const b of balls) { if (!b.on || b === except) continue; if ((b.x - x) ** 2 + (b.y - y) ** 2 < (2 * BR + 1) ** 2) return true; }
+  return false;
+}
+function respot(b) {
+  let x = FOOT_X, tries = 0; b.vx = b.vy = 0; b.on = true;
+  while (overlapsAny(x, CY, b) && tries++ < 40) x += BR * 2.1;
+  b.x = x; b.y = CY;
+}
+function validCue(x, y) {
+  if (x < PL + BR || x > PR - BR || y < PT + BR || y > PB - BR) return false;
+  for (const p of POCKETS) if ((x - p.x) ** 2 + (y - p.y) ** 2 < (p.r + BR + 2) ** 2) return false;
+  return !overlapsAny(x, y, cue);
+}
+function defaultCuePos() {
+  const tryPos = [[HEAD_X, CY], [HEAD_X, CY - 40], [HEAD_X, CY + 40]];
+  for (const [x, y] of tryPos) if (validCue(x, y)) return { x, y };
+  for (let i = 0; i < 400; i++) {
+    const x = PL + BR + Math.random() * (PR - PL - 2 * BR), y = PT + BR + Math.random() * (PB - PT - 2 * BR);
+    if (validCue(x, y)) return { x, y };
+  }
+  return { x: HEAD_X, y: CY };
+}
+function legalTargets(p) {
+  const g = groups[p];
+  if (!g) return balls.filter(b => b.on && (b.type === 'solid' || b.type === 'stripe'));
+  if (ballsLeft(g) === 0) return balls.filter(b => b.on && b.type === 'eight');
+  return balls.filter(b => b.on && b.type === g);
+}
+
+function resolveShot() {
+  const s = shotInfo, me = turn, opp = 1 - turn;
+  const pk = s.pocketed;
+  const eightBall = balls.find(b => b.type === 'eight');
+  const cueIn = pk.includes(cue), eightIn = pk.includes(eightBall);
+  const objs = pk.filter(b => b !== cue && b.type !== 'eight');
+  const reasons = [];
+  if (cueIn) reasons.push('bola putih masuk');
+  if (!s.firstHit) reasons.push('tidak mengenai bola apa pun');
+  else {
+    const t = s.firstHit.type;
+    if (s.startOpen) { if (t === 'eight') reasons.push('bola 8 disodok lebih dulu'); }
+    else if (s.onEight) { if (t !== 'eight') reasons.push('harus mengenai bola 8'); }
+    else if (t !== groups[me]) reasons.push('salah sasaran');
+  }
+  if (s.firstHit && !cueIn && objs.length === 0 && !eightIn && !s.rail) reasons.push('tidak ada bola menyentuh rail');
+  const foul = reasons.length > 0;
+  notice = '';
+
+  if (eightIn) {
+    if (s.isBreak) { respot(eightBall); notice += 'Bola 8 masuk saat break, dikembalikan ke meja. '; }
+    else {
+      const win = !s.startOpen && s.onEight && !foul;
+      const why = win ? 'memasukkan bola 8 dengan sah'
+        : (!s.onEight || s.startOpen) ? 'memasukkan bola 8 terlalu cepat' : 'foul saat memasukkan bola 8 (' + reasons.join(', ') + ')';
+      gameOver(win ? me : opp, names[win ? me : opp] + ' ' + (win ? why : 'menang karena ' + names[me] + ' ' + why) + '.');
+      return;
+    }
+  }
+  if (groups[me] === null && !s.isBreak && !foul && objs.length > 0) {
+    groups[me] = objs[0].type; groups[opp] = groups[me] === 'solid' ? 'stripe' : 'solid';
+    notice += names[me] + ' mendapat bola ' + groupLabel(groups[me]) + '. ';
+  }
+  let cont = false;
+  if (!foul) cont = groups[me] === null ? objs.length > 0 : objs.some(b => b.type === groups[me]);
+  if (!cont) { turn = opp; if (foul) ballInHand = true; }
+  if (foul) notice += 'Foul (' + reasons.join(', ') + '). ' + (ballInHand ? names[turn] + ' dapat bola di tangan. ' : '');
+  else if (cont) notice += 'Bola masuk, ' + names[me] + ' lanjut. ';
+  firstShot = false; shotInfo = null;
+  beginTurn();
+}
+
+function gameOver(winner, text) {
+  state = 'over'; shotInfo = null; gameStarted = false; renderHud(); updateControls();
+  const youWin = mode === 'cpu' && winner === 0;
+  showOverlay((youWin ? 'KAMU MENANG!' : mode === 'cpu' ? 'KOMPUTER MENANG' : names[winner].toUpperCase() + ' MENANG!'), text + ' Main lagi?', false);
+}
+
+function beginTurn() {
+  renderHud();
+  if (ballInHand) {
+    state = 'placing';
+    cue.on = true; cue.vx = cue.vy = 0;
+    if (!validCue(cue.x, cue.y)) { const p = defaultCuePos(); cue.x = p.x; cue.y = p.y; }
+    if (isCpu(turn)) { setMsg(notice + 'Komputer menaruh bola putih…'); later(cpuPlace, 800); }
+    else setMsg(notice + names[turn] + ': seret bola putih ke posisi yang kamu mau, lalu tekan OK.');
+  } else {
+    state = 'aim';
+    defaultAim();
+    if (isCpu(turn)) { setMsg(notice + 'Komputer sedang membidik…'); later(cpuAim, 800); }
+    else setMsg(notice + names[turn] + ': bidik ' + targetText(turn) + '.');
+  }
+  updateControls();
+}
+function defaultAim() {
+  if (firstShot) { aimAngle = 0; return; }
+  const t = legalTargets(turn); if (!t.length) return;
+  let best = t[0], bd = 1e9;
+  for (const b of t) { const d = Math.hypot(b.x - cue.x, b.y - cue.y); if (d < bd) { bd = d; best = b; } }
+  aimAngle = Math.atan2(best.y - cue.y, best.x - cue.x);
+}
+function confirmPlace() {
+  if (state !== 'placing') return;
+  ballInHand = false; beginTurn();
+}
+
+/* ============================== KOMPUTER (AI) ============================== */
+function pathClear(ax, ay, bx, by, ignore, clear) {
+  const dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy;
+  for (const b of balls) {
+    if (!b.on || ignore.includes(b)) continue;
+    let t = l2 ? ((b.x - ax) * dx + (b.y - ay) * dy) / l2 : 0; t = clamp(t, 0, 1);
+    const px = ax + dx * t, py = ay + dy * t;
+    if ((b.x - px) ** 2 + (b.y - py) ** 2 < clear * clear) return false;
+  }
+  return true;
+}
+function planShot(px, py) {
+  const out = [];
+  for (const t of legalTargets(turn)) {
+    for (const p of POCKETS) {
+      const pd = Math.hypot(p.x - t.x, p.y - t.y); if (pd < 1) continue;
+      const ux = (p.x - t.x) / pd, uy = (p.y - t.y) / pd;
+      const gx = t.x - ux * 2 * BR, gy = t.y - uy * 2 * BR;
+      if (gx < PL + BR || gx > PR - BR || gy < PT + BR || gy > PB - BR) continue;
+      const cd = Math.hypot(gx - px, gy - py); if (cd < 2) continue;
+      const dx = (gx - px) / cd, dy = (gy - py) / cd, cosA = dx * ux + dy * uy;
+      if (cosA < 0.25) continue;
+      const clear = 2 * BR * 0.97;
+      if (!pathClear(px, py, gx, gy, [cue, t], clear)) continue;
+      if (!pathClear(t.x, t.y, p.x, p.y, [cue, t], clear)) continue;
+      const mid = p.x === CX ? 0.2 : 0;
+      out.push({ angle: Math.atan2(dy, dx), cd, pd, cosA, score: cosA * 1.6 - (cd + pd) / 1000 - mid });
+    }
+  }
+  return out.sort((a, b) => b.score - a.score);
+}
+function powerFor(c) {
+  const v = Math.sqrt(2 * FR * (c.cd + c.pd / Math.max(c.cosA, 0.35))) * 1.25 + 120;
+  return clamp(Math.pow(clamp((v - 120) / 1800, 0.02, 1), 1 / 1.2), 0.28, 1);
+}
+function cpuAim() {
+  if (state !== 'aim' || !isCpu(turn)) return;
+  const sd = [0.05, 0.02, 0.005][level], psd = [0.15, 0.08, 0.03][level];
+  let angle, pw;
+  if (firstShot) { angle = Math.atan2(CY - cue.y, FOOT_X - cue.x); pw = 0.95; }
+  else {
+    const c = planShot(cue.x, cue.y);
+    if (c.length && Math.random() > [0.3, 0.1, 0.0][level]) {
+      let pick = c[0];
+      if (level === 0) pick = c[(Math.random() * Math.min(3, c.length)) | 0];
+      else if (level === 1 && c.length > 1 && Math.random() < 0.3) pick = c[1];
+      angle = pick.angle; pw = powerFor(pick);
+    } else {
+      const t = legalTargets(turn); let best = t[0], bd = 1e9;
+      for (const b of t) { const d = Math.hypot(b.x - cue.x, b.y - cue.y); if (d < bd) { bd = d; best = b; } }
+      angle = Math.atan2(best.y - cue.y, best.x - cue.x); pw = 0.4 + Math.random() * 0.3;
+    }
+  }
+  aimAngle = angle + gauss() * sd;
+  power = clamp(pw * (1 + gauss() * psd), 0.12, 1);
+  powerEl.value = Math.round(power * 100);
+  later(() => { if (state === 'aim' && isCpu(turn)) startShot(aimAngle, power); }, 900);
+}
+function cpuPlace() {
+  if (state !== 'placing' || !isCpu(turn)) return;
+  let best = null, bs = -1e9;
+  for (let i = 0; i < 90; i++) {
+    const x = PL + BR + Math.random() * (PR - PL - 2 * BR), y = PT + BR + Math.random() * (PB - PT - 2 * BR);
+    if (!validCue(x, y)) continue;
+    const c = planShot(x, y), s = c.length ? c[0].score : -5;
+    if (s > bs) { bs = s; best = { x, y }; }
+  }
+  if (!best) best = defaultCuePos();
+  cue.x = best.x; cue.y = best.y; confirmPlace();
+}
+
+/* ============================== GAME FLOW ============================== */
+function newGame(m, lv) {
+  mode = m; level = lv; clearTimeout(timer);
+  names = m === 'cpu' ? ['Kamu', 'Komputer' + (lv === 0 ? ' (mudah)' : lv === 1 ? ' (sedang)' : ' (sulit)')] : ['Pemain 1', 'Pemain 2'];
+  groups = [null, null]; turn = 0; firstShot = true; ballInHand = false; shotInfo = null; anim = null; notice = '';
+  paused = false; gameStarted = true; power = 0.6; powerEl.value = 60;
+  rack(); hideOverlay();
+  notice = 'Break! ';
+  beginTurn();
+}
+function showOverlay(title, text, canResume) {
+  paused = true;
+  $('ovTitle').innerHTML = title.indexOf('BILLIARD') === 0 ? 'BILLIARD <b>8</b>' : title;
+  $('ovText').innerHTML = text;
+  $('btnResume').style.display = canResume ? '' : 'none';
+  overlay.classList.remove('hide');
+}
+function hideOverlay() { overlay.classList.add('hide'); paused = false; }
+
+/* ============================== HUD & KONTROL ============================== */
+function setMsg(t) { msgEl.textContent = t; }
+function miniBall(b) {
+  const bg = b.type === 'stripe' ? 'linear-gradient(#f4f1e8 0 24%,' + b.color + ' 24% 76%,#f4f1e8 76%)' : b.color;
+  const txt = b.type === 'solid' && b.n !== 8 && b.color === '#151515' ? '#fff' : '#111';
+  return '<div class="mini' + (b.on ? '' : ' out') + '" style="background:' + bg + '"><i style="color:' + txt + '">' + b.n + '</i></div>';
+}
+function renderHud() {
+  for (let p = 0; p < 2; p++) {
+    const g = groups[p], el = $('b' + (p + 1));
+    $('n' + (p + 1)).textContent = names[p];
+    $('p' + (p + 1)).classList.toggle('active', state !== 'over' && state !== 'menu' && turn === p);
+    if (!g) { el.innerHTML = '<span class="hint">Belum ditentukan</span>'; continue; }
+    let h = balls.filter(b => b.type === g).sort((a, b) => a.n - b.n).map(miniBall).join('');
+    if (ballsLeft(g) === 0) h += miniBall(balls.find(b => b.type === 'eight'));
+    el.innerHTML = h;
+  }
+}
+function updateControls() {
+  const canAct = humanTurn() && (state === 'aim' || state === 'placing');
+  controls.classList.toggle('off', !canAct);
+  shootBtn.textContent = state === 'placing' ? 'OK' : 'TEMBAK';
+}
+function onShootBtn() {
+  ensureAudio();
+  if (!humanTurn() || paused) return;
+  if (state === 'aim') startShot(aimAngle, power);
+  else if (state === 'placing') confirmPlace();
+}
+
+/* ============================== INPUT ============================== */
+function toLogical(e) {
+  const r = canvas.getBoundingClientRect();
+  const u = (e.clientX - r.left) / r.width * dw, v = (e.clientY - r.top) / r.height * dh;
+  return portrait ? { x: v, y: LH - u } : { x: u, y: v };
+}
+function canAim() { return !paused && humanTurn() && state === 'aim'; }
+canvas.addEventListener('pointerdown', e => {
+  ensureAudio();
+  if (paused || !humanTurn()) return;
+  try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
+  const p = toLogical(e);
+  ptr = { type: e.pointerType, sx: e.clientX, sy: e.clientY, moved: false, last: Math.atan2(p.y - cue.y, p.x - cue.x) };
+  if (state === 'placing') tryPlace(p.x, p.y);
+  else if (state === 'aim' && e.pointerType === 'mouse') aimAngle = Math.atan2(p.y - cue.y, p.x - cue.x);
+});
+canvas.addEventListener('pointermove', e => {
+  if (paused || !humanTurn()) return;
+  const p = toLogical(e);
+  if (ptr && Math.hypot(e.clientX - ptr.sx, e.clientY - ptr.sy) > 6) ptr.moved = true;
+  if (state === 'placing') { if (ptr) tryPlace(p.x, p.y); return; }
+  if (state !== 'aim') return;
+  if (e.pointerType === 'mouse') { aimAngle = Math.atan2(p.y - cue.y, p.x - cue.x); return; }
+  if (!ptr) return;
+  const a2 = Math.atan2(p.y - cue.y, p.x - cue.x), d = Math.hypot(p.x - cue.x, p.y - cue.y);
+  aimAngle += normAng(a2 - ptr.last) * Math.min(1, d / 80);
+  ptr.last = a2;
+});
+canvas.addEventListener('pointerup', e => {
+  if (ptr && ptr.type === 'mouse' && !ptr.moved && canAim()) startShot(aimAngle, power);
+  ptr = null;
+});
+canvas.addEventListener('pointercancel', () => { ptr = null; });
+canvas.addEventListener('contextmenu', e => e.preventDefault());
+canvas.addEventListener('wheel', e => {
+  if (!canAim()) return; e.preventDefault();
+  setPower(power + (e.deltaY < 0 ? 0.04 : -0.04));
+}, { passive: false });
+function tryPlace(x, y) {
+  x = clamp(x, PL + BR, PR - BR); y = clamp(y, PT + BR, PB - BR);
+  if (validCue(x, y)) { cue.x = x; cue.y = y; }
+}
+function setPower(v) { power = clamp(v, 0.05, 1); powerEl.value = Math.round(power * 100); }
+powerEl.addEventListener('input', () => { power = powerEl.value / 100; });
+
+let rotTimer = 0;
+function startRot(dir) {
+  if (!canAim()) return; let k = 0;
+  aimAngle += dir * 0.002;
+  clearInterval(rotTimer);
+  rotTimer = setInterval(() => { if (!canAim()) return; aimAngle += dir * (0.002 + Math.min(k++, 30) * 0.0004); }, 30);
+}
+function stopRot() { clearInterval(rotTimer); }
+for (const [id, dir] of [['rotL', -1], ['rotR', 1]]) {
+  const el = $(id);
+  el.addEventListener('pointerdown', e => { e.preventDefault(); ensureAudio(); startRot(dir); });
+  ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => el.addEventListener(ev, stopRot));
+}
+shootBtn.addEventListener('click', onShootBtn);
+window.addEventListener('keydown', e => {
+  if (paused) return;
+  const fine = e.shiftKey ? 0.002 : 0.012;
+  if (e.key === 'ArrowLeft' && canAim()) { aimAngle -= fine; e.preventDefault(); }
+  else if (e.key === 'ArrowRight' && canAim()) { aimAngle += fine; e.preventDefault(); }
+  else if (e.key === 'ArrowUp' && canAim()) { setPower(power + 0.03); e.preventDefault(); }
+  else if (e.key === 'ArrowDown' && canAim()) { setPower(power - 0.03); e.preventDefault(); }
+  else if (e.key === ' ' || e.key === 'Enter') { onShootBtn(); e.preventDefault(); }
+});
+$('btnMenu').addEventListener('click', () => {
+  ensureAudio();
+  showOverlay('BILLIARD 8', 'Menu permainan. Pilih mode untuk mulai game baru.', gameStarted && state !== 'over');
+});
+$('btnResume').addEventListener('click', hideOverlay);
+$('btnSnd').addEventListener('click', () => { ensureAudio(); muted = !muted; $('btnSnd').innerHTML = muted ? '&#128263;' : '&#128266;'; });
+overlay.querySelectorAll('[data-m]').forEach(b => b.addEventListener('click', () => { ensureAudio(); newGame(b.dataset.m, +b.dataset.l); }));
+
+/* ============================== RENDER ============================== */
+function resize() {
+  const r = stage.getBoundingClientRect(), sw = Math.max(1, r.width), sh = Math.max(1, r.height);
+  const sL = Math.min(sw / LW, sh / LH), sP = Math.min(sw / LH, sh / LW);
+  portrait = sP > sL;
+  dw = portrait ? LH : LW; dh = portrait ? LW : LH;
+  const sc = portrait ? sP : sL, dpr = window.devicePixelRatio || 1;
+  S = Math.min(3, sc * dpr);
+  canvas.style.width = Math.floor(dw * sc) + 'px'; canvas.style.height = Math.floor(dh * sc) + 'px';
+  canvas.width = Math.round(dw * S); canvas.height = Math.round(dh * S);
+  buildTable();
+}
+function rr(c, x, y, w, h, r) {
+  c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r);
+  c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath();
+}
+function buildTable() {
+  tableC = document.createElement('canvas');
+  tableC.width = Math.round(LW * S); tableC.height = Math.round(LH * S);
+  const c = tableC.getContext('2d'); c.scale(S, S);
+  // bingkai kayu
+  let g = c.createLinearGradient(0, 0, 0, LH);
+  g.addColorStop(0, '#7a4a22'); g.addColorStop(0.5, '#5a3315'); g.addColorStop(1, '#3d2210');
+  c.fillStyle = g; rr(c, 0, 0, LW, LH, 30); c.fill();
+  c.strokeStyle = 'rgba(255,255,255,.12)'; c.lineWidth = 2; rr(c, 3, 3, LW - 6, LH - 6, 28); c.stroke();
+  // serat kayu halus
+  c.globalAlpha = 0.07; c.strokeStyle = '#000';
+  for (let i = 0; i < 60; i++) { c.beginPath(); const y = Math.random() * LH; c.moveTo(0, y); c.bezierCurveTo(300, y + 8, 700, y - 8, LW, y + 3); c.stroke(); }
+  c.globalAlpha = 1;
+  // bantalan (cushion)
+  c.fillStyle = '#0b4f2e'; rr(c, PL - 24, PT - 24, PR - PL + 48, PB - PT + 48, 12); c.fill();
+  c.strokeStyle = 'rgba(0,0,0,.45)'; c.lineWidth = 3; rr(c, PL - 24, PT - 24, PR - PL + 48, PB - PT + 48, 12); c.stroke();
+  // kain
+  g = c.createRadialGradient(CX, CY, 60, CX, CY, 560);
+  g.addColorStop(0, '#22a862'); g.addColorStop(1, '#127a43');
+  c.fillStyle = g; c.fillRect(PL, PT, PR - PL, PB - PT);
+  c.strokeStyle = 'rgba(0,0,0,.35)'; c.lineWidth = 2; c.strokeRect(PL, PT, PR - PL, PB - PT);
+  // garis & titik
+  c.strokeStyle = 'rgba(255,255,255,.16)'; c.lineWidth = 1.5;
+  c.beginPath(); c.moveTo(HEAD_X, PT); c.lineTo(HEAD_X, PB); c.stroke();
+  c.fillStyle = 'rgba(255,255,255,.28)';
+  for (const x of [HEAD_X, FOOT_X, CX]) { c.beginPath(); c.arc(x, CY, 3, 0, TAU); c.fill(); }
+  // berlian di rel
+  c.fillStyle = '#e9dcc0';
+  const dia = (x, y) => { c.save(); c.translate(x, y); c.rotate(Math.PI / 4); c.fillRect(-4, -4, 8, 8); c.restore(); };
+  for (let k = 1; k < 8; k++) if (k !== 4) { const x = PL + (PR - PL) * k / 8; dia(x, 13); dia(x, LH - 13); }
+  for (let k = 1; k < 4; k++) { const y = PT + (PB - PT) * k / 4; dia(13, y); dia(LW - 13, y); }
+  // kantong
+  for (const p of POCKETS) {
+    const r = p.r - 6;
+    c.fillStyle = '#6d6d6d'; c.beginPath(); c.arc(p.x, p.y, r + 4, 0, TAU); c.fill();
+    const pg = c.createRadialGradient(p.x, p.y, 2, p.x, p.y, r);
+    pg.addColorStop(0, '#000'); pg.addColorStop(1, '#161616');
+    c.fillStyle = pg; c.beginPath(); c.arc(p.x, p.y, r, 0, TAU); c.fill();
+  }
+}
+function drawBall(x, y, b, sc, al) {
+  const r = BR * sc;
+  ctx.save(); ctx.globalAlpha = al;
+  ctx.fillStyle = 'rgba(0,0,0,.28)'; ctx.beginPath(); ctx.arc(x + 2.5 * sc, y + 3.5 * sc, r, 0, TAU); ctx.fill();
+  ctx.save(); ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.clip();
+  ctx.fillStyle = b.type === 'stripe' ? '#f4f1e8' : b.color; ctx.fillRect(x - r, y - r, 2 * r, 2 * r);
+  if (b.type === 'stripe') { ctx.fillStyle = b.color; ctx.fillRect(x - r, y - r * 0.58, 2 * r, r * 1.16); }
+  if (b.n > 0) {
+    ctx.fillStyle = '#f4f1e8'; ctx.beginPath(); ctx.arc(x, y, r * 0.5, 0, TAU); ctx.fill();
+    ctx.save(); ctx.translate(x, y); if (portrait) ctx.rotate(-Math.PI / 2);
+    ctx.fillStyle = '#111'; ctx.font = 'bold ' + Math.round(r * 0.72) + 'px sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(String(b.n), 0, 0.5); ctx.restore();
+  }
+  const g = ctx.createRadialGradient(x - r * 0.4, y - r * 0.45, r * 0.08, x, y, r);
+  g.addColorStop(0, 'rgba(255,255,255,.6)'); g.addColorStop(0.35, 'rgba(255,255,255,0)'); g.addColorStop(1, 'rgba(0,0,0,.42)');
+  ctx.fillStyle = g; ctx.fillRect(x - r, y - r, 2 * r, 2 * r);
+  ctx.restore(); ctx.restore();
+}
+function drawAim() {
+  const dx = Math.cos(aimAngle), dy = Math.sin(aimAngle);
+  let tmin = Infinity, hitBall = null;
+  for (const b of balls) {
+    if (!b.on || b === cue) continue;
+    const ox = b.x - cue.x, oy = b.y - cue.y, proj = ox * dx + oy * dy; if (proj <= 0) continue;
+    const perp2 = ox * ox + oy * oy - proj * proj, R2 = 4 * BR * BR; if (perp2 >= R2) continue;
+    const t = proj - Math.sqrt(R2 - perp2); if (t < tmin) { tmin = t; hitBall = b; }
+  }
+  let tw = Infinity;
+  if (dx > 0) tw = Math.min(tw, (PR - BR - cue.x) / dx); else if (dx < 0) tw = Math.min(tw, (PL + BR - cue.x) / dx);
+  if (dy > 0) tw = Math.min(tw, (PB - BR - cue.y) / dy); else if (dy < 0) tw = Math.min(tw, (PT + BR - cue.y) / dy);
+  if (tw < tmin) { tmin = tw; hitBall = null; }
+  const hx = cue.x + dx * tmin, hy = cue.y + dy * tmin;
+  ctx.save();
+  ctx.strokeStyle = 'rgba(255,255,255,.75)'; ctx.lineWidth = 1.6; ctx.setLineDash([7, 6]);
+  ctx.beginPath(); ctx.moveTo(cue.x + dx * BR, cue.y + dy * BR); ctx.lineTo(hx, hy); ctx.stroke();
+  ctx.setLineDash([]); ctx.lineWidth = 1.6;
+  ctx.beginPath(); ctx.arc(hx, hy, BR, 0, TAU); ctx.stroke();
+  if (hitBall) {
+    const nx = (hitBall.x - hx) / (2 * BR), ny = (hitBall.y - hy) / (2 * BR);
+    ctx.strokeStyle = 'rgba(255,230,120,.9)'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(hitBall.x, hitBall.y); ctx.lineTo(hitBall.x + nx * 70, hitBall.y + ny * 70); ctx.stroke();
+    const d = dx * nx + dy * ny, tx = dx - d * nx, ty = dy - d * ny, tl = Math.hypot(tx, ty);
+    if (tl > 0.05) {
+      ctx.strokeStyle = 'rgba(255,255,255,.5)'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(hx + tx / tl * 45 * tl, hy + ty / tl * 45 * tl); ctx.stroke();
+    }
+  }
+  ctx.restore();
+}
+function drawCue(gap) {
+  ctx.save(); ctx.translate(cue.x, cue.y); ctx.rotate(aimAngle);
+  const start = -(BR + 4 + gap), len = 380;
+  ctx.fillStyle = 'rgba(0,0,0,.25)';
+  ctx.beginPath(); ctx.moveTo(start, 1); ctx.lineTo(start - len, 4); ctx.lineTo(start - len, 15); ctx.lineTo(start, 6); ctx.fill();
+  const g = ctx.createLinearGradient(start, 0, start - len, 0);
+  g.addColorStop(0, '#8fc7ff'); g.addColorStop(0.03, '#f2f2f2'); g.addColorStop(0.04, '#ecca8f');
+  g.addColorStop(0.62, '#c78a45'); g.addColorStop(0.63, '#2b1a0f'); g.addColorStop(1, '#150c06');
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.moveTo(start, -2); ctx.lineTo(start - len, -5.5); ctx.lineTo(start - len, 5.5); ctx.lineTo(start, 2); ctx.closePath(); ctx.fill();
+  ctx.restore();
+}
+function draw() {
+  ctx.setTransform(S, 0, 0, S, 0, 0);
+  ctx.clearRect(0, 0, dw, dh);
+  if (portrait) ctx.transform(0, 1, -1, 0, LH, 0);
+  if (tableC) ctx.drawImage(tableC, 0, 0, LW, LH);
+  if (!balls.length) return;
+  for (const b of balls) if (b.on && b !== cue) drawBall(b.x, b.y, b, 1, 1);
+  if (cue.on) {
+    drawBall(cue.x, cue.y, cue, 1, 1);
+    if (state === 'placing') {
+      ctx.save(); ctx.strokeStyle = 'rgba(255,230,120,.95)'; ctx.lineWidth = 2; ctx.setLineDash([5, 4]);
+      ctx.beginPath(); ctx.arc(cue.x, cue.y, BR + 6, 0, TAU); ctx.stroke(); ctx.restore();
+    }
+  }
+  for (const f of falling) {
+    const k = f.t / 0.3, e = k * k;
+    drawBall(f.x + (f.px - f.x) * e, f.y + (f.py - f.y) * e, f.b, 1 - 0.55 * k, 1 - k * 0.9);
+  }
+  if (!paused || state === 'shooting') {
+    if (state === 'aim' && humanTurn()) { drawAim(); drawCue(6 + power * 45); }
+    else if (state === 'aim') { drawAim(); drawCue(6 + power * 45); }
+    else if (state === 'shooting' && anim) {
+      const idle = 6 + power * 45, maxG = 12 + power * 75, pd = 0.22, td = 0.07;
+      const gap = anim.t < pd ? idle + (maxG - idle) * (1 - Math.pow(1 - anim.t / pd, 2)) : maxG * (1 - Math.min(1, (anim.t - pd) / td));
+      drawCue(gap);
+    }
+  }
+}
+
+/* ============================== LOOP ============================== */
+let lastT = performance.now();
+function frame(now) {
+  const dt = Math.min(0.05, (now - lastT) / 1000); lastT = now;
+  if (!paused) {
+    for (const f of falling) f.t += dt;
+    falling = falling.filter(f => f.t < 0.3);
+    if (state === 'shooting') {
+      anim.t += dt;
+      if (anim.t >= 0.29) fire();
+    } else if (state === 'moving') {
+      acc += dt; movingTime += dt;
+      while (acc >= DT) { step(DT); acc -= DT; }
+      if (movingTime > 40) for (const b of balls) { b.vx = 0; b.vy = 0; }
+      if (allStopped()) resolveShot();
+    }
+  }
+  draw();
+  requestAnimationFrame(frame);
+}
+
+/* ============================== MULAI ============================== */
+window.addEventListener('resize', resize);
+if (window.ResizeObserver) new ResizeObserver(resize).observe(stage);   // pesan 1-3 baris mengubah tinggi meja
+window.addEventListener('orientationchange', () => setTimeout(resize, 150));
+rack(); cue.on = true;
+renderHud(); resize();
+showOverlay('BILLIARD 8', 'Game bola 8 gratis tanpa aset berhak cipta.<br>Seret di meja untuk memutar bidikan, atur power, lalu tekan TEMBAK.', false);
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
